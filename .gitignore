@@ -57,4 +57,7 @@ temp/
 *.bak
 *.backup
 *.old
-*.orig 
+*.orig
+
+# jqwik test database
+.jqwik-database 
