@@ -200,6 +200,9 @@ object Conjugator {
     }
 
     private fun regularPreteriteWithDoubledTerminalConsonant(infinitive: String): String {
+        // Double the terminal consonant (e.g., "ship" -> "shipp")
+        // The doubled form will NOT match DOUBLE_CONSONANT_PATTERN again (ends with two consonants)
+        // so recursion terminates safely
         val doubled = infinitive + infinitive.last()
         return regularPreterite(doubled)
     }
@@ -231,8 +234,12 @@ object Conjugator {
     private fun presentParticipleWithDoubledTerminalConsonant(infinitive: String): String {
         // Use find() for better performance
         return if (Patterns.C_ENDING.find(infinitive) != null) {
+            // C ending is special case - don't double, process normally
             presentParticiple(infinitive)
         } else {
+            // Double the terminal consonant (e.g., "ship" -> "shipp")
+            // The doubled form will NOT match DOUBLE_CONSONANT_PATTERN again (ends with two consonants)
+            // so recursion terminates safely
             val doubled = infinitive + infinitive.last()
             presentParticiple(doubled)
         }
