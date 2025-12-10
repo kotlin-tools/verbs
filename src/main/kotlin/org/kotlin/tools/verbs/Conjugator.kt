@@ -50,7 +50,6 @@ object Conjugator {
         val VOWEL_CONSONANT_E_ENDING = Regex("${VOWEL_PATTERN.pattern}${CONSONANT_PATTERN.pattern}e$|ue$")
     }
 
-    // Use lazy initialization for better performance - only initialize when first accessed
     private val irregularVerbs: Map<String, Verb> by lazy {
         buildMap {
             initializeBasicIrregularVerbs(this)
@@ -58,13 +57,11 @@ object Conjugator {
         }
     }
     
-    // Use immutable set for better performance
     private val singleTerminalConsonants: Set<String> by lazy {
         setOf("abandon", "follow", "trigger", "deliver", "color")
     }
 
     fun conjugate(infinitive: String, options: ConjugationOptions = ConjugationOptions()): String {
-        // Cache the lowercase conversion to avoid repeated calls
         val verb = infinitive.lowercase()
         val conjugated = conjugateVerb(verb, options)
         return addSubject(conjugated, options.subject)
@@ -130,7 +127,6 @@ object Conjugator {
     }
 
     private fun present(infinitive: String, person: Person, plurality: Plurality, mood: Mood): String {
-        // Use early return for performance - check irregular verbs once
         irregularVerbs[infinitive]?.let { irregular ->
             return handleIrregularPresent(irregular, person, plurality, mood)
         }
@@ -161,7 +157,6 @@ object Conjugator {
     }
 
     private fun past(infinitive: String, person: Person, plurality: Plurality, mood: Mood): String {
-        // Use early return pattern for better performance
         irregularVerbs[infinitive]?.let { irregular ->
             irregular.getForm(Tense.PAST, person, plurality, mood)?.let { return it }
             return irregular.preterite ?: irregular.infinitive
@@ -170,7 +165,6 @@ object Conjugator {
     }
 
     private fun presentThirdPersonSingular(infinitive: String): String {
-        // Use find() instead of containsMatchIn() for better performance
         return when {
             Patterns.Y_ENDING.find(infinitive) != null -> infinitive.dropLast(1) + "ies"
             Patterns.SIBILANT_ENDING.find(infinitive) != null -> infinitive + "es"
@@ -184,7 +178,6 @@ object Conjugator {
             return regularPreteriteWithDoubledTerminalConsonant(infinitive)
         }
         
-        // Use find() instead of containsMatchIn() for better performance
         return when {
             Patterns.E_ENDING.find(infinitive) != null -> infinitive + "d"
             Patterns.Y_CONSONANT_ENDING.find(infinitive) != null -> infinitive.dropLast(1) + "ied"
@@ -194,21 +187,16 @@ object Conjugator {
     }
 
     private fun shouldDoubleConsonant(infinitive: String): Boolean {
-        // Use find() for better performance and check set membership last (short-circuit)
         return Patterns.DOUBLE_CONSONANT_PATTERN.find(infinitive) != null && 
                infinitive !in singleTerminalConsonants
     }
 
     private fun regularPreteriteWithDoubledTerminalConsonant(infinitive: String): String {
-        // Double the terminal consonant (e.g., "ship" -> "shipp")
-        // The doubled form will NOT match DOUBLE_CONSONANT_PATTERN again (ends with two consonants)
-        // so recursion terminates safely
         val doubled = infinitive + infinitive.last()
         return regularPreterite(doubled)
     }
 
     private fun presentParticiple(infinitive: String): String {
-        // Early return for irregular verbs to avoid unnecessary checks
         irregularVerbs[infinitive]?.let {
             return it.infinitive + "ing"
         }
@@ -222,7 +210,6 @@ object Conjugator {
     }
 
     private fun getPresentParticipleBase(infinitive: String): String {
-        // Use find() for better performance
         return when {
             Patterns.C_ENDING.find(infinitive) != null -> infinitive + "k"
             Patterns.IE_ENDING.find(infinitive) != null -> infinitive.dropLast(2) + "y"
@@ -232,21 +219,15 @@ object Conjugator {
     }
 
     private fun presentParticipleWithDoubledTerminalConsonant(infinitive: String): String {
-        // Use find() for better performance
         return if (Patterns.C_ENDING.find(infinitive) != null) {
-            // C ending is special case - don't double, process normally
             presentParticiple(infinitive)
         } else {
-            // Double the terminal consonant (e.g., "ship" -> "shipp")
-            // The doubled form will NOT match DOUBLE_CONSONANT_PATTERN again (ends with two consonants)
-            // so recursion terminates safely
             val doubled = infinitive + infinitive.last()
             presentParticiple(doubled)
         }
     }
 
     private fun pastParticiple(infinitive: String): String {
-        // Use early return for better performance
         irregularVerbs[infinitive]?.let {
             return it.pastParticiple ?: it.preterite ?: it.infinitive
         }
@@ -315,7 +296,6 @@ object Conjugator {
     }
 
     fun getIrregularCount(): Int {
-        // Access irregularVerbs to trigger lazy initialization if needed
         return irregularVerbs.size
     }
 
