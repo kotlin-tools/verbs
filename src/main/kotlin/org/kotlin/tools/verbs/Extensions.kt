@@ -145,13 +145,17 @@ class VerbWrapper(private val base: String) {
      * @return A pair of (infinitive, remaining words)
      */
     private fun extractVerbAndRemaining(words: List<String>): Pair<String, List<String>> {
-        val infinitive = if (words.first().lowercase() == "to") {
+        // Cache the lowercase conversion to avoid repeated calls
+        val firstWordLower = words.first().lowercase()
+        val hasToPrefix = firstWordLower == "to"
+        
+        val infinitive = if (hasToPrefix) {
             words.drop(1).first().lowercase()
         } else {
-            words.first().lowercase()
+            firstWordLower
         }
         
-        val remainingWords = if (words.first().lowercase() == "to") {
+        val remainingWords = if (hasToPrefix) {
             words.drop(2)
         } else {
             words.drop(1)
