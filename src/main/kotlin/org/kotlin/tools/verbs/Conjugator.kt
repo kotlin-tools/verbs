@@ -50,11 +50,15 @@ object Conjugator {
         val VOWEL_CONSONANT_E_ENDING = Regex("${VOWEL_PATTERN.pattern}${CONSONANT_PATTERN.pattern}e$|ue$")
     }
 
-    private val irregularVerbs = mutableMapOf<String, Verb>()
-    private val singleTerminalConsonants = mutableSetOf<String>()
-
-    init {
-        initializeIrregularVerbs()
+    private val irregularVerbs: Map<String, Verb> by lazy {
+        buildMap {
+            initializeBasicIrregularVerbs(this)
+            initializeCopulaVerb(this)
+        }
+    }
+    
+    private val singleTerminalConsonants: Set<String> by lazy {
+        setOf("abandon", "follow", "trigger", "deliver", "color")
     }
 
     fun conjugate(infinitive: String, options: ConjugationOptions = ConjugationOptions()): String {
@@ -123,8 +127,7 @@ object Conjugator {
     }
 
     private fun present(infinitive: String, person: Person, plurality: Plurality, mood: Mood): String {
-        val irregular = irregularVerbs[infinitive]
-        if (irregular != null) {
+        irregularVerbs[infinitive]?.let { irregular ->
             return handleIrregularPresent(irregular, person, plurality, mood)
         }
         return handleRegularPresent(infinitive, person, plurality, mood)
@@ -154,10 +157,8 @@ object Conjugator {
     }
 
     private fun past(infinitive: String, person: Person, plurality: Plurality, mood: Mood): String {
-        val irregular = irregularVerbs[infinitive]
-        if (irregular != null) {
-            val form = irregular.getForm(Tense.PAST, person, plurality, mood)
-            if (form != null) return form
+        irregularVerbs[infinitive]?.let { irregular ->
+            irregular.getForm(Tense.PAST, person, plurality, mood)?.let { return it }
             return irregular.preterite ?: irregular.infinitive
         }
         return regularPreterite(infinitive)
@@ -165,9 +166,9 @@ object Conjugator {
 
     private fun presentThirdPersonSingular(infinitive: String): String {
         return when {
-            Patterns.Y_ENDING.containsMatchIn(infinitive) -> infinitive.dropLast(1) + "ies"
-            Patterns.SIBILANT_ENDING.containsMatchIn(infinitive) -> infinitive + "es"
-            Patterns.S_ENDING.containsMatchIn(infinitive) -> infinitive + "ses"
+            Patterns.Y_ENDING.find(infinitive) != null -> infinitive.dropLast(1) + "ies"
+            Patterns.SIBILANT_ENDING.find(infinitive) != null -> infinitive + "es"
+            Patterns.S_ENDING.find(infinitive) != null -> infinitive + "ses"
             else -> infinitive + "s"
         }
     }
@@ -178,16 +179,16 @@ object Conjugator {
         }
         
         return when {
-            Patterns.E_ENDING.containsMatchIn(infinitive) -> infinitive + "d"
-            Patterns.Y_CONSONANT_ENDING.containsMatchIn(infinitive) -> infinitive.dropLast(1) + "ied"
-            Patterns.C_ENDING.containsMatchIn(infinitive) -> infinitive.dropLast(1) + "cked"
+            Patterns.E_ENDING.find(infinitive) != null -> infinitive + "d"
+            Patterns.Y_CONSONANT_ENDING.find(infinitive) != null -> infinitive.dropLast(1) + "ied"
+            Patterns.C_ENDING.find(infinitive) != null -> infinitive.dropLast(1) + "cked"
             else -> infinitive + "ed"
         }
     }
 
     private fun shouldDoubleConsonant(infinitive: String): Boolean {
-        return Patterns.DOUBLE_CONSONANT_PATTERN.containsMatchIn(infinitive) && 
-               !singleTerminalConsonants.contains(infinitive)
+        return Patterns.DOUBLE_CONSONANT_PATTERN.find(infinitive) != null && 
+               infinitive !in singleTerminalConsonants
     }
 
     private fun regularPreteriteWithDoubledTerminalConsonant(infinitive: String): String {
@@ -196,9 +197,8 @@ object Conjugator {
     }
 
     private fun presentParticiple(infinitive: String): String {
-        val irregular = irregularVerbs[infinitive]
-        if (irregular != null) {
-            return irregular.infinitive + "ing"
+        irregularVerbs[infinitive]?.let {
+            return it.infinitive + "ing"
         }
         
         if (shouldDoubleConsonant(infinitive)) {
@@ -211,15 +211,15 @@ object Conjugator {
 
     private fun getPresentParticipleBase(infinitive: String): String {
         return when {
-            Patterns.C_ENDING.containsMatchIn(infinitive) -> infinitive + "k"
-            Patterns.IE_ENDING.containsMatchIn(infinitive) -> infinitive.dropLast(2) + "y"
-            Patterns.VOWEL_CONSONANT_E_ENDING.containsMatchIn(infinitive) -> infinitive.dropLast(1)
+            Patterns.C_ENDING.find(infinitive) != null -> infinitive + "k"
+            Patterns.IE_ENDING.find(infinitive) != null -> infinitive.dropLast(2) + "y"
+            Patterns.VOWEL_CONSONANT_E_ENDING.find(infinitive) != null -> infinitive.dropLast(1)
             else -> infinitive
         }
     }
 
     private fun presentParticipleWithDoubledTerminalConsonant(infinitive: String): String {
-        return if (Patterns.C_ENDING.containsMatchIn(infinitive)) {
+        return if (Patterns.C_ENDING.find(infinitive) != null) {
             presentParticiple(infinitive)
         } else {
             val doubled = infinitive + infinitive.last()
@@ -228,9 +228,8 @@ object Conjugator {
     }
 
     private fun pastParticiple(infinitive: String): String {
-        val irregular = irregularVerbs[infinitive]
-        if (irregular != null) {
-            return irregular.pastParticiple ?: irregular.preterite ?: irregular.infinitive
+        irregularVerbs[infinitive]?.let {
+            return it.pastParticiple ?: it.preterite ?: it.infinitive
         }
         return regularPreterite(infinitive)
     }
@@ -257,22 +256,16 @@ object Conjugator {
         }
     }
 
-    private fun initializeIrregularVerbs() {
-        initializeBasicIrregularVerbs()
-        initializeCopulaVerb()
-        initializeSingleTerminalConsonants()
-    }
-
-    private fun initializeBasicIrregularVerbs() {
-        irregularVerbs["know"] = Verb("know", "knew", "known")
-        irregularVerbs["break"] = Verb("break", "broke", "broken")
+    private fun initializeBasicIrregularVerbs(map: MutableMap<String, Verb>) {
+        map["know"] = Verb("know", "knew", "known")
+        map["break"] = Verb("break", "broke", "broken")
         
         val have = Verb("have", "had", "had")
         have.form("has", VerbFormOptions(tense = Tense.PRESENT, person = Person.THIRD, plurality = Plurality.SINGULAR))
-        irregularVerbs["have"] = have
+        map["have"] = have
     }
 
-    private fun initializeCopulaVerb() {
+    private fun initializeCopulaVerb(map: MutableMap<String, Verb>) {
         val be = Verb("be", "was", "been")
         
         // Present forms
@@ -295,12 +288,7 @@ object Conjugator {
         be.form("being", VerbFormOptions(tense = Tense.PRESENT, derivative = Derivative.PRESENT_PARTICIPLE))
         be.form("been", VerbFormOptions(tense = Tense.PAST, derivative = Derivative.PAST_PARTICIPLE))
         
-        irregularVerbs["be"] = be
-    }
-
-    private fun initializeSingleTerminalConsonants() {
-        val exceptions = listOf("abandon", "follow", "trigger", "deliver", "color")
-        singleTerminalConsonants.addAll(exceptions)
+        map["be"] = be
     }
 
     fun isIrregular(verb: String): Boolean {
