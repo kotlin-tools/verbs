@@ -29,7 +29,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("net.jqwik:jqwik:1.9.3")
     testImplementation("net.jqwik:jqwik-kotlin:1.9.3")
-    testImplementation("org.assertj:assertj-core:3.27.6")
+    testImplementation("org.assertj:assertj-core:3.27.7")
 }
 
 tasks.test {
